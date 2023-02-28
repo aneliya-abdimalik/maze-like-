@@ -1,127 +1,69 @@
-<?php
-declare(strict_types=1);
+function dijkstra($graph, $start, $destination) {
+    $distances = array_fill(0, count($graph), INF);
+    $visited = array_fill(0, count($graph), false);
+    $distances[$start] = 0;
 
-class Maze
-{
-    /**
-     * @var array
-     */
-    private $tiles = [];
+    for ($i = 0; $i < count($graph); $i++) {
+        $minDist = INF;
+        $current = -1;
 
-    /**
-     * Maze constructor.
-     *
-     * @param array $tiles
-     */
-    private function __construct(array $tiles = [])
-    {
-        $this->tiles = $tiles;
-    }
-
-    /**
-     * @param string $maze
-     * @param string $rowDelimiter
-     *
-     * @return Maze
-     */
-    public static function fromString(string $maze, string $rowDelimiter = "\n"): Maze
-    {
-        $tiles = [];
-
-        foreach (explode($rowDelimiter, $maze) as $r => $row) {
-            $rowTiles = [];
-            foreach (str_split(trim($row)) as $c => $value) {
-                $rowTiles[] = (object)[
-                    'row' => $r,
-                    'col' => $c,
-                    'value' => $value
-                ];
-            }
-
-            $tiles[] = $rowTiles;
-        }
-
-        return new self($tiles);
-    }
-
-    /**
-     * @param callable $renderer
-     * @param string   $rowDelimiter
-     *
-     * @return string
-     */
-    public function toString(callable $renderer = null, string $rowDelimiter = "\n"): string
-    {
-        $renderer = $renderer ?: function ($tile) { return $tile->value; };
-
-        $result = [];
-        foreach ($this->tiles as $r => $row) {
-            if (!isset($result[$r])) {
-                $result[$r] = [];
-            }
-
-            foreach ($row as $c => $tile) {
-                $result[$r][$c] = $renderer($tile);
+        // find unvisited node with the smallest distance
+        for ($j = 0; $j < count($graph); $j++) {
+            if (!$visited[$j] && $distances[$j] < $minDist) {
+                $minDist = $distances[$j];
+                $current = $j;
             }
         }
 
-        return implode($rowDelimiter, array_map('implode', $result));
-    }
+        if ($current == -1) {
+            // no path found
+            return null;
+        }
 
-    /**
-     * @param string $value
-     *
-     * @return object
-     */
-    public function find(string $value)
-    {
-        foreach ($this->tiles as $row) {
-            foreach ($row as $tile) {
-                if ($tile->value === $value) {
-                    return $tile;
+        $visited[$current] = true;
+
+        // update distances of neighboring nodes
+        for ($j = 0; $j < count($graph); $j++) {
+            if ($graph[$current][$j] > 0 && !$visited[$j]) {
+                $newDist = $distances[$current] + $graph[$current][$j];
+                if ($newDist < $distances[$j]) {
+                    $distances[$j] = $newDist;
                 }
             }
         }
 
-        return null;
-    }
-
-    /**
-     * @param object $tile
-     * @param array  $filter
-     *
-     * @return array
-     */
-    public function getNeighbors($tile, array $filter = []): array
-    {
-        $neighbors = [];
-        foreach ([
-            [-1, -1], [-1, 0], [-1, 1],
-            [ 0, -1],          [ 0, 1],
-            [ 1, -1], [ 1, 0], [ 1, 1],
-        ] as $transformation) {
-            $r = $tile->row + $transformation[0];
-            $c = $tile->col + $transformation[1];
-
-            if (isset($this->tiles[$r][$c]) && !in_array($this->tiles[$r][$c]->value, $filter, true)) {
-                $neighbors[] = $this->tiles[$r][$c];
-            }
+        if ($current == $destination) {
+            // shortest path found
+            return $distances[$destination];
         }
-
-        return $neighbors;
     }
 
-    /**
-     * @param object $a
-     * @param object $b
-     *
-     * @return float
-     */
-    public function getDistance($a, $b): float
-    {
-        $p = $b->row - $a->row;
-        $q = $b->col - $a->col;
-
-        return sqrt($p * $p + $q * $q);
-    }
+    // no path found
+    return null;
 }
+
+
+$graph = array(
+    array(0, 4, 0, 0, 0, 0, 0, 8, 0),
+    array(4, 0, 8, 0, 0, 0, 0, 1, 0),
+    array(0, 8, 0, 7, 0, 4, 0, 0, 2),
+    array(0, 0, 7, 0, 9, 4, 0, 0, 0),
+    array(0, 0, 0, 9, 0, 5, 0, 0, 0),
+    array(0, 0, 4, 7, 3, 0, 2, 0, 0),
+    array(0, 0, 0, 0, 0, 2, 0, 1, 6),
+    array(8, 9, 0, 0, 0, 0, 1, 0, 7),
+    array(0, 0, 2, 0, 0, 0, 6, 7, 0)
+);
+
+$start = 0;
+$destination = 4;
+
+$shortestPath = dijkstra($graph, $start, $destination);
+
+if ($shortestPath === null) {
+    echo "No path found.";
+} else {
+    echo "Shortest path from $start to $destination is $shortestPath.";
+}
+
+
